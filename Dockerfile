@@ -14,7 +14,7 @@ WORKDIR /app
 
 # Copier les fichiers du projet
 COPY playbooks /app/playbooks
-COPY templates /app/templates
+COPY playbooks/templates /app/playbooks/templates
 COPY inventory /app/inventory
 COPY scripts/entrypoint.sh /app/entrypoint.sh
 
