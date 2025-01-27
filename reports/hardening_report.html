@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hardening Report</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f4f4f4;
+        }
+        .pass {
+            color: green;
+        }
+        .fail {
+            color: red;
+        }
+    </style>
+</head>
+<body>
+    <h1>Hardening Report</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Check</th>
+                <th>Result</th>
+                <th>Priority</th>
+                <th>Status</th>
+                <th>Comment</th>
+            </tr>
+        </thead>
+        <tbody>
+                        <tr>
+                <td>Password Expiration</td>
+                <td>PASS_MAX_DAYS	99999</td>
+                <td>High</td>
+                <td class="fail">Fail</td>
+                <td>Ensure password expiration is set to 90 days.</td>
+            </tr>
+                        <tr>
+                <td>SSH Root Login</td>
+                <td>PermitRootLogin no</td>
+                <td>High</td>
+                <td class="pass">Pass</td>
+                <td>Ensure SSH root login is disabled.</td>
+            </tr>
+                        <tr>
+                <td>Firewall Status</td>
+                <td>ufw not active</td>
+                <td>High</td>
+                <td class="pass">Pass</td>
+                <td>Ensure firewall is enabled.</td>
+            </tr>
+                        <tr>
+                <td>Unnecessary Services</td>
+                <td>No unnecessary services found</td>
+                <td>Medium</td>
+                <td class="pass">Pass</td>
+                <td>Ensure unnecessary services are disabled.</td>
+            </tr>
+                        <tr>
+                <td>Automatic Updates</td>
+                <td>APT::Periodic::Update-Package-Lists "1";</td>
+                <td>High</td>
+                <td class="pass">Pass</td>
+                <td>Ensure automatic updates are enabled.</td>
+            </tr>
+                        <tr>
+                <td>Auditd Status</td>
+                <td>auditd not active</td>
+                <td>High</td>
+                <td class="pass">Pass</td>
+                <td>Ensure auditd is installed and running.</td>
+            </tr>
+                        <tr>
+                <td>SELinux Status</td>
+                <td>SELinux not enabled</td>
+                <td>High</td>
+                <td class="pass">Pass</td>
+                <td>Ensure SELinux is enabled.</td>
+            </tr>
+                        <tr>
+                <td>File Permissions</td>
+                <td>-rw-r--r-- /etc/passwd
+-rw-r--r-- /etc/group</td>
+                <td>High</td>
+                <td class="fail">Fail</td>
+                <td>Ensure permissions on sensitive files are correct.</td>
+            </tr>
+                        <tr>
+                <td>Cron Restriction</td>
+                <td>cron not restricted</td>
+                <td>Medium</td>
+                <td class="fail">Fail</td>
+                <td>Ensure cron is restricted to authorized users.</td>
+            </tr>
+                        <tr>
+                <td>NTP Configuration</td>
+                <td>NTP not configured</td>
+                <td>High</td>
+                <td class="fail">Fail</td>
+                <td>Ensure NTP is configured.</td>
+            </tr>
+                    </tbody>
+    </table>
+</body>
+</html>

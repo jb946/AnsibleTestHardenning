@@ -1,0 +1,140 @@
+---
+- name: Top 10 Hardening Checks
+  hosts: all
+  become: yes
+  vars:
+    report_dir: "/tmp/hardening_report"
+    report_file: "{{ report_dir }}/hardening_report.html"
+
+  tasks:
+    - name: Create report directory
+      file:
+        path: "{{ report_dir }}"
+        state: directory
+
+    - name: Check 1 - Ensure password expiration is set
+      shell: |
+        grep -E '^PASS_MAX_DAYS' /etc/login.defs || echo "PASS_MAX_DAYS 90"
+      register: pass_max_days
+      changed_when: false
+
+    - name: Check 2 - Ensure SSH root login is disabled
+      shell: |
+        grep -E '^PermitRootLogin no' /etc/ssh/sshd_config || echo "PermitRootLogin no"
+      register: ssh_root_login
+      changed_when: false
+
+    - name: Check 3 - Ensure firewall is enabled
+      shell: |
+        systemctl is-active ufw || echo "ufw not active"
+      register: firewall_status
+      changed_when: false
+
+    - name: Check 4 - Ensure unnecessary services are disabled
+      command: >
+        sh -c "systemctl list-unit-files | grep enabled | grep -E 'telnet|ftp|rsh|rlogin|rexec' || echo 'No unnecessary services found'"
+      register: unnecessary_services
+      changed_when: false
+      ignore_errors: yes
+
+    - name: Check 5 - Ensure automatic updates are enabled
+      shell: |
+        grep -E '^APT::Periodic::Update-Package-Lists "1";' /etc/apt/apt.conf.d/20auto-upgrades || echo "APT::Periodic::Update-Package-Lists \"1\";"
+      register: auto_updates
+      changed_when: false
+
+    - name: Check 6 - Ensure auditd is installed and running
+      shell: |
+        systemctl is-active auditd || echo "auditd not active"
+      register: auditd_status
+      changed_when: false
+
+    - name: Check 7 - Ensure SELinux is enabled
+      shell: |
+        sestatus | grep "SELinux status" | grep "enabled" || echo "SELinux not enabled"
+      register: selinux_status
+      changed_when: false
+
+    - name: Check 8 - Ensure permissions on sensitive files are correct
+      shell: |
+        stat -c "%A %n" /etc/passwd /etc/shadow /etc/group | grep -E '^-rw-r--r--|^-rw-------'
+      register: file_permissions
+      changed_when: false
+
+    - name: Check 9 - Ensure cron is restricted to authorized users
+      shell: |
+        ls -l /etc/cron.allow /etc/cron.deny || echo "cron not restricted"
+      register: cron_restriction
+      changed_when: false
+
+    - name: Check 10 - Ensure NTP is configured
+      shell: |
+        ntpq -p || echo "NTP not configured"
+      register: ntp_status
+      changed_when: false
+
+    - name: Generate HTML report
+      template:
+        src: report_template.html.j2
+        dest: "{{ report_file }}"
+      vars:
+        checks:
+          - name: "Password Expiration"
+            result: "{{ pass_max_days.stdout }}"
+            priority: "High"
+            status: "{{ 'Pass' if 'PASS_MAX_DAYS 90' in pass_max_days.stdout else 'Fail' }}"
+            comment: "Ensure password expiration is set to 90 days."
+
+          - name: "SSH Root Login"
+            result: "{{ ssh_root_login.stdout }}"
+            priority: "High"
+            status: "{{ 'Pass' if 'PermitRootLogin no' in ssh_root_login.stdout else 'Fail' }}"
+            comment: "Ensure SSH root login is disabled."
+
+          - name: "Firewall Status"
+            result: "{{ firewall_status.stdout }}"
+            priority: "High"
+            status: "{{ 'Pass' if 'active' in firewall_status.stdout else 'Fail' }}"
+            comment: "Ensure firewall is enabled."
+
+          - name: "Unnecessary Services"
+            result: "{{ unnecessary_services.stdout }}"
+            priority: "Medium"
+            status: "{{ 'Pass' if 'No unnecessary services found' in unnecessary_services.stdout else 'Fail' }}"
+            comment: "Ensure unnecessary services are disabled."
+
+          - name: "Automatic Updates"
+            result: "{{ auto_updates.stdout }}"
+            priority: "High"
+            status: "{{ 'Pass' if 'APT::Periodic::Update-Package-Lists \"1\";' in auto_updates.stdout else 'Fail' }}"
+            comment: "Ensure automatic updates are enabled."
+
+          - name: "Auditd Status"
+            result: "{{ auditd_status.stdout }}"
+            priority: "High"
+            status: "{{ 'Pass' if 'active' in auditd_status.stdout else 'Fail' }}"
+            comment: "Ensure auditd is installed and running."
+
+          - name: "SELinux Status"
+            result: "{{ selinux_status.stdout }}"
+            priority: "High"
+            status: "{{ 'Pass' if 'enabled' in selinux_status.stdout else 'Fail' }}"
+            comment: "Ensure SELinux is enabled."
+
+          - name: "File Permissions"
+            result: "{{ file_permissions.stdout }}"
+            priority: "High"
+            status: "{{ 'Pass' if '-rw-r--r--' in file_permissions.stdout and '-rw-------' in file_permissions.stdout else 'Fail' }}"
+            comment: "Ensure permissions on sensitive files are correct."
+
+          - name: "Cron Restriction"
+            result: "{{ cron_restriction.stdout }}"
+            priority: "Medium"
+            status: "{{ 'Pass' if cron_restriction.stdout == '' else 'Fail' }}"
+            comment: "Ensure cron is restricted to authorized users."
+
+          - name: "NTP Configuration"
+            result: "{{ ntp_status.stdout }}"
+            priority: "High"
+            status: "{{ 'Pass' if 'ntpq -p' in ntp_status.stdout else 'Fail' }}"
+            comment: "Ensure NTP is configured."

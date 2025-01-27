@@ -1,0 +1,84 @@
+---
+- name: Remediate Hardening Issues
+  hosts: all
+  become: yes
+  tasks:
+    - name: Set password expiration to 90 days
+      lineinfile:
+        path: /etc/login.defs
+        regexp: '^PASS_MAX_DAYS'
+        line: 'PASS_MAX_DAYS 90'
+      when: "'PASS_MAX_DAYS 90' not in pass_max_days.stdout"
+
+    - name: Disable SSH root login
+      lineinfile:
+        path: /etc/ssh/sshd_config
+        regexp: '^PermitRootLogin'
+        line: 'PermitRootLogin no'
+      when: "'PermitRootLogin no' not in ssh_root_login.stdout"
+      notify: Restart SSH
+
+    - name: Enable firewall
+      service:
+        name: ufw
+        state: started
+        enabled: yes
+      when: "'active' not in firewall_status.stdout"
+
+    - name: Disable unnecessary services
+      service:
+        name: "{{ item }}"
+        state: stopped
+        enabled: no
+      loop: "{{ unnecessary_services.stdout_lines }}"
+      when: unnecessary_services.stdout != ''
+
+    - name: Enable automatic updates
+      lineinfile:
+        path: /etc/apt/apt.conf.d/20auto-upgrades
+        regexp: '^APT::Periodic::Update-Package-Lists'
+        line: 'APT::Periodic::Update-Package-Lists "1";'
+      when: "'APT::Periodic::Update-Package-Lists \"1\";' not in auto_updates.stdout"
+
+    - name: Enable auditd
+      service:
+        name: auditd
+        state: started
+        enabled: yes
+      when: "'active' not in auditd_status.stdout"
+
+    - name: Enable SELinux
+      command: setenforce 1
+      when: "'enabled' not in selinux_status.stdout"
+
+    - name: Set correct permissions on sensitive files
+      file:
+        path: "{{ item.path }}"
+        mode: "{{ item.mode }}"
+      with_items:
+        - { path: '/etc/passwd', mode: '0644' }
+        - { path: '/etc/shadow', mode: '0600' }
+        - { path: '/etc/group', mode: '0644' }
+      when: "'-rw-r--r--' not in file_permissions.stdout or '-rw-------' not in file_permissions.stdout"
+
+    - name: Restrict cron to authorized users
+      file:
+        path: "{{ item.path }}"
+        state: touch
+        mode: "{{ item.mode }}"
+      with_items:
+        - { path: '/etc/cron.allow', mode: '0600' }
+        - { path: '/etc/cron.deny', mode: '0600' }
+      when: cron_restriction.stdout != ''
+
+    - name: Configure NTP
+      apt:
+        name: ntp
+        state: present
+      when: "'ntpq -p' not in ntp_status.stdout"
+
+  handlers:
+    - name: Restart SSH
+      service:
+        name: sshd
+        state: restarted
